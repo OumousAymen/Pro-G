@@ -8,11 +8,11 @@ class HomePage extends StatelessWidget {
   final String email;
 
   const HomePage({
-    Key? key,
+    super.key,
     required this.firstName,
     required this.lastName,
     required this.email,
-  }) : super(key: key);
+  });
 
   void _disconnect(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
