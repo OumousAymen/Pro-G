@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525679992169",
+    "project_id": "pro-g-e85ea",
+    "storage_bucket": "pro-g-e85ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525679992169:android:468f8f499da3401339f1f8",
+        "android_client_info": {
+          "package_name": "com.example.tryout"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzDLrs-Fy4qCDZ8HoL3pxHPzdKk2vIHEM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
