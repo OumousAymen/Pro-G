@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tryout/signup.dart';
 import 'firebase_options.dart';
 import 'homepage.dart';
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AuthWrapper(), // Automatically check if user is logged in
+      home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -96,13 +96,26 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() => _isLoading = true);
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
+      // Sign in with email and password.
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      String uid = userCredential.user!.uid;
+      // Reload the user to ensure the emailVerified flag is updated.
+      User? user = userCredential.user;
+      if (user != null) {
+        await user.reload();
+        user = FirebaseAuth.instance.currentUser;
+        if (!user!.emailVerified) {
+          _showError("Your email is not verified. Please check your inbox for the verification email.");
+          await FirebaseAuth.instance.signOut();
+          return;
+        }
+      }
+
+      // Retrieve user data from Firestore.
+      String uid = user!.uid;
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('Utilisateurs')
           .doc(uid)
@@ -173,97 +186,98 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child:ConstrainedBox(constraints: const BoxConstraints(maxWidth: 450),child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              elevation: 8,
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: emailController,
-                      decoration: const InputDecoration(
-                        labelText: "Email",
-                        hintText: "Enter your email",
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: "Password",
-                        hintText: "Enter your password",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _rememberMe = value!;
-                            });
-                          },
-                        ),
-                        const Text("Remember me"),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 50, vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor:Colors.white ,
-                        elevation: 5,
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text("Login"),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignUpPage()),
-                        );
-                      },
-                      child: const Text(
-                        "Don't have an account? Sign up",
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 450),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                elevation: 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        widget.title,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                           color: Colors.deepPurple,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: const InputDecoration(
+                          labelText: "Email",
+                          hintText: "Enter your email",
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: "Password",
+                          hintText: "Enter your password",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Checkbox(
+                            value: _rememberMe,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                _rememberMe = value!;
+                              });
+                            },
+                          ),
+                          const Text("Remember me"),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                          elevation: 5,
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator()
+                            : const Text("Login"),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SignUpPage()),
+                          );
+                        },
+                        child: const Text(
+                          "Don't have an account? Sign up",
+                          style: TextStyle(
+                            decoration: TextDecoration.underline,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),),
+            ),
           ),
         ),
       ),

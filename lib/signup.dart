@@ -1,6 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Email Verification Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const SignUpPage(),
+    );
+  }
+}
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -21,12 +43,15 @@ class _SignUpPageState extends State<SignUpPage> {
       _isLoading = true;
     });
     try {
-      // Create the user using Firebase Authentication.
+      // Create the user with Firebase Authentication.
       UserCredential userCredential =
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      // Send the built-in email verification.
+      await userCredential.user!.sendEmailVerification();
 
       // Save additional user data (first and last name) to Firestore.
       await FirebaseFirestore.instance
@@ -38,17 +63,18 @@ class _SignUpPageState extends State<SignUpPage> {
         'email': _emailController.text.trim(),
       });
 
-      // Optionally, show a success message or navigate to another page.
+      // Inform the user that a verification email has been sent.
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Success"),
-          content: const Text("Account created successfully."),
+          content: const Text(
+              "Account created successfully. Please check your email to verify your account."),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                // You can also navigate to a login page or home screen here.
+                // Optionally navigate to the login or home page.
               },
               child: const Text("OK"),
             ),
@@ -56,7 +82,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      // Show error message if something goes wrong.
+      // Handle Firebase-specific errors.
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -73,14 +99,14 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
     } catch (e) {
-      print(e);
       // Generic error handling.
+      print(e);
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Error"),
-
-          content: const Text("An error occurred. Please try again."),
+          content:
+          const Text("An error occurred. Please try again."),
           actions: [
             TextButton(
               onPressed: () {
@@ -146,12 +172,11 @@ class _SignUpPageState extends State<SignUpPage> {
               obscureText: true,
             ),
             const SizedBox(height: 24.0),
-            // Signup Button
+            // Sign Up Button
             ElevatedButton(
               onPressed: _isLoading ? null : _signUp,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 50, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
