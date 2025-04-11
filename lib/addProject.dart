@@ -219,6 +219,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
                     onPressed: _pickPDF,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text("Pick PDF"),
                   ),
