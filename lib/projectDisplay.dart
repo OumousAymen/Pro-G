@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProjectDisplayPage extends StatelessWidget {
   final Map<String, dynamic> projectData;
@@ -50,8 +51,7 @@ class ProjectDisplayPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -132,8 +132,18 @@ class ProjectDisplayPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () {
-                      // Optionally open the github link
+                    onTap: () async {
+                      final Uri url = Uri.parse(githubLink);
+                      // Check if the URL can be launched
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Could not launch $githubLink'),
+                          ),
+                        );
+                      }
                     },
                     child: Text(
                       githubLink,
