@@ -31,6 +31,12 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // Initial scroll to bottom after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
     _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: geminiApiKey);
 
     final user = _auth.currentUser;
@@ -144,8 +150,16 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
                 final messages = snapshot.data!.docs;
 
+                // scroll to end
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                  }
+                });
+
                 return ListView.builder(
                   controller: _scrollController,
+                  reverse: false,
                   itemCount: messages.length + (_isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
                     // Show loading indicator as the last item if loading
