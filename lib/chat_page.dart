@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'secrets.dart';
+import 'dart:math';
 
 
 class ChatPage extends StatefulWidget {
@@ -12,16 +13,26 @@ class ChatPage extends StatefulWidget {
   _ChatPageState createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late CollectionReference _messagesCollection;
+  late GenerativeModel _model;
+  //for animation
+  bool _isLoading = false;
+  late AnimationController _loadingController;
+  final List<double> _dotOpacities = [0.2, 0.2, 0.2];
+  // Add to _ChatPageState class
+  late AnimationController _waveController;
+  final List<Animation<double>> _dotAnimations = [];
 
   @override
   void initState() {
     super.initState();
+    _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: geminiApiKey);
+
     final user = _auth.currentUser;
     if (user != null) {
       _messagesCollection = _firestore
@@ -29,34 +40,82 @@ class _ChatPageState extends State<ChatPage> {
           .doc(user.uid)
           .collection('messages');
     }
+
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    for (var i = 0; i < 3; i++) {
+      _dotAnimations.add(Tween(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _waveController,
+          curve: Interval(i * 0.2, 1.0, curve: Curves.easeInOut),
+        ),
+      ));
+    }
+  }
+
+  Widget _buildLoadingDot(int index) {
+    return AnimatedBuilder(
+      animation: _waveController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _dotAnimations[index].value,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: const BoxDecoration(
+              color: Colors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _waveController.dispose();
+    super.dispose();
   }
 
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    // Add user message to Firestore
-    await _messagesCollection.add({
-      'text': message,
-      'isUser': true,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    setState(() => _isLoading = true);
 
-    _messageController.clear();
+    try {
+      // Add user message
+      await _messagesCollection.add({
+        'text': message,
+        'isUser': true,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      _messageController.clear();
 
-    // Get Gemini response
-    const apiKey = geminiApiKey; // Replace with your API key
-    final model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: apiKey);
-    final response = await model.generateContent([Content.text(message)]);
+      // Get Gemini response
+      final content = [Content.text(message)];
+      final response = await _model.generateContent(content);
 
-    // Add bot response to Firestore
-    await _messagesCollection.add({
-      'text': response.text ?? 'I did not understand that.',
-      'isUser': false,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+      // Add bot response
+      await _messagesCollection.add({
+        'text': response.text ?? 'I did not understand that.',
+        'isUser': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      await _messagesCollection.add({
+        'text': 'Sorry, I encountered an error. Please try again.',
+        'isUser': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } finally {
+      setState(() => _isLoading = false);
+    }
 
-    // Scroll to bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -87,21 +146,43 @@ class _ChatPageState extends State<ChatPage> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  itemCount: messages.length,
+                  itemCount: messages.length + (_isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
-                    final message =
-                        messages[index].data() as Map<String, dynamic>;
+                    // Show loading indicator as the last item if loading
+                    if (index >= messages.length) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildLoadingDot(0),
+                              const SizedBox(width: 4),
+                              _buildLoadingDot(1),
+                              const SizedBox(width: 4),
+                              _buildLoadingDot(2),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final message = messages[index].data() as Map<String, dynamic>;
                     final isUser = message['isUser'] ?? false;
 
                     return Align(
-                      alignment:
-                          isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.all(8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color:
-                              isUser ? Colors.deepPurple : Colors.grey.shade200,
+                          color: isUser ? Colors.deepPurple : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -114,8 +195,9 @@ class _ChatPageState extends State<ChatPage> {
                       ),
                     );
                   },
+
                 );
-              },
+                },
             ),
           ),
           Padding(
@@ -147,4 +229,9 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
+
+  // animation widget
+
+
+
 }
