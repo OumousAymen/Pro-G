@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'main.dart'; // Your login page file.
+
 import 'addProject.dart'; // File for adding a project.
+import 'chat_page.dart';
+import 'main.dart'; // Your login page file.
 import 'projectDisplay.dart'; // File for displaying project details.
 
 class HomePage extends StatelessWidget {
@@ -55,7 +57,7 @@ class HomePage extends StatelessWidget {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.orange, Colors.purpleAccent],
+            colors: [Color(0xFFF4F1F8), Color(0xFFF0F8FF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -117,10 +119,11 @@ class HomePage extends StatelessWidget {
                   }
 
                   return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('Projects')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
+                    stream:
+                        FirebaseFirestore.instance
+                            .collection('Projects')
+                            .orderBy('timestamp', descending: true)
+                            .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -144,15 +147,16 @@ class HomePage extends StatelessWidget {
                         itemCount: projects.length,
                         itemBuilder: (context, index) {
                           final projectData =
-                          projects[index].data() as Map<String, dynamic>;
+                              projects[index].data() as Map<String, dynamic>;
                           return GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ProjectDisplayPage(
-                                    projectData: projectData,
-                                  ),
+                                  builder:
+                                      (context) => ProjectDisplayPage(
+                                        projectData: projectData,
+                                      ),
                                 ),
                               );
                             },
@@ -187,22 +191,43 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-      // Floating Action Button to add a new project.
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddProjectPage(
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-              ),
+
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: 16.0, bottom: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => AddProjectPage(
+                          firstName: firstName,
+                          lastName: lastName,
+                          email: email,
+                        ),
+                  ),
+                );
+              },
+              backgroundColor: Colors.deepPurple,
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-          );
-        },
-        backgroundColor: Colors.deepPurple,
-        child: const Icon(Icons.add, color: Colors.white),
+            const SizedBox(width: 16),
+            FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ChatPage()),
+                );
+              },
+              backgroundColor: Colors.green,
+              child: const Icon(Icons.chat, color: Colors.white),
+            ),
+          ],
+        ),
       ),
     );
   }

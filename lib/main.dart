@@ -178,7 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.orange, Colors.purpleAccent],
+            colors: [Color(0xFFF4F1F8), Color(0xFFF4F1F8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
