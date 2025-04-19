@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'secrets.dart';
+
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -43,7 +45,7 @@ class _ChatPageState extends State<ChatPage> {
     _messageController.clear();
 
     // Get Gemini response
-    const apiKey = 'AIzaSyB6yF5JWKPZjo6GbjQZmOqiOoa__7dRrXQ'; // Replace with your API key
+    const apiKey = geminiApiKey; // Replace with your API key
     final model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: apiKey);
     final response = await model.generateContent([Content.text(message)]);
 
