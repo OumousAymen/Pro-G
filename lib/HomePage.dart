@@ -591,9 +591,13 @@ class _HomePageState extends State<HomePage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => ProjectDisplayPage(
-                                    projectData: projectData,
+                                    projectData: {
+                                      ...projectData, // Spread all existing project data
+                                      'id': projectId, // Add the document ID to the data
+                                    },
                                     currentUserEmail: FirebaseAuth.instance.currentUser?.email ?? '', // Add this line
-
+                                    firstname: widget.firstName,
+                                    lastname: widget.lastName,
                                   ),
                                 ),
                               );
