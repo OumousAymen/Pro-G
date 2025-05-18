@@ -554,59 +554,37 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                         _buildSectionHeader(
                           Icons.category_rounded,
                           "Project Type",
-                          isOwner && !isEditMode,
+                          false, // Removed the conditional to hide edit option
                         ),
                         const SizedBox(height: 10),
-                        isEditMode
-                            ? TextField(
-                              controller: _projectTypeController,
-                              style: TextStyle(fontSize: 16),
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                              ),
-                            )
-                            : Container(
-                              padding: EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: accentColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: accentColor.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Text(
-                                projectType,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.3),
                             ),
+                          ),
+                          child: Text(
+                            projectType,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                         const Divider(height: 40, thickness: 1),
 
                         // Programming Languages
                         _buildSectionHeader(
                           Icons.code_rounded,
                           "Languages",
-                          isOwner && !isEditMode,
+                          false, // Removed the conditional to hide edit option
                         ),
                         const SizedBox(height: 10),
                         Wrap(
@@ -662,7 +640,8 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                         _buildSectionHeader(
                           Icons.link_rounded,
                           "Github Link",
-                          isOwner && !isEditMode,
+                          isOwner &&
+                              !isEditMode, // Restore edit indicator for owners
                         ),
                         const SizedBox(height: 10),
                         isEditMode
@@ -691,57 +670,95 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                                 fillColor: Colors.grey.shade50,
                               ),
                             )
-                            : GestureDetector(
-                              onTap: () async {
-                                final Uri url = Uri.parse(githubLink);
-                                if (await canLaunchUrl(url)) {
-                                  await launchUrl(url);
-                                } else {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Could not launch $githubLink',
-                                        ),
-                                        backgroundColor: Colors.red.shade600,
-                                      ),
+                            : MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  try {
+                                    final Uri url = Uri.parse(githubLink);
+                                    bool launched = await launchUrl(
+                                      url,
+                                      mode: LaunchMode.externalApplication,
                                     );
-                                  }
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 12,
-                                  horizontal: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.link, color: accentColor),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        githubLink,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: accentColor,
-                                          decoration: TextDecoration.underline,
+
+                                    if (!launched) {
+                                      launched = await launchUrl(
+                                        url,
+                                        mode: LaunchMode.platformDefault,
+                                      );
+                                    }
+
+                                    if (!launched && context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not launch $githubLink',
+                                          ),
+                                          backgroundColor: Colors.red.shade600,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red.shade600,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.blue.shade200,
                                     ),
-                                  ],
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.2),
+                                        spreadRadius: 1,
+                                        blurRadius: 2,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.open_in_new,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          githubLink,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.blue.shade700,
+                                            decoration:
+                                                TextDecoration.underline,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                         const Divider(height: 40, thickness: 1),
-
                         // Rapport
                         if (rapportUrl.isNotEmpty)
                           Column(
@@ -1085,86 +1102,6 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                 ),
 
                 const SizedBox(height: 24),
-
-                // Resubmit Button (Only for owners)
-                if (isOwner && !isEditMode)
-                  Container(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Implementation for resubmitting project
-                        if (widget.projectData['id'] != null) {
-                          FirebaseFirestore.instance
-                              .collection('Projects')
-                              .doc(widget.projectData['id'])
-                              .update({
-                                'status': 'resubmitted',
-                                'resubmittedAt': Timestamp.now(),
-                              })
-                              .then((_) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Project resubmitted successfully!',
-                                    ),
-                                    backgroundColor: Colors.green.shade600,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                );
-                              })
-                              .catchError((error) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Error resubmitting project: $error',
-                                    ),
-                                    backgroundColor: Colors.red.shade600,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                );
-                              });
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Project resubmitted successfully!',
-                              ),
-                              backgroundColor: Colors.green.shade600,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      icon: Icon(Icons.refresh_rounded),
-                      label: Text(
-                        "Resubmit Project",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 3,
-                      ),
-                    ),
-                  ),
-
-                SizedBox(height: 30),
               ],
             ),
           ),
