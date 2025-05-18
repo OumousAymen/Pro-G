@@ -52,17 +52,25 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
 
     // Check if current user is owner
     final Map<String, dynamic> submitter =
-    widget.projectData['submitter'] is Map<String, dynamic>
-        ? widget.projectData['submitter']
-        : {};
+        widget.projectData['submitter'] is Map<String, dynamic>
+            ? widget.projectData['submitter']
+            : {};
     isOwner = submitter['email'] == widget.currentUserEmail;
 
     // Initialize controllers
     _commentController = TextEditingController();
-    _nameController = TextEditingController(text: _editableProjectData['name'] ?? '');
-    _descriptionController = TextEditingController(text: _editableProjectData['description'] ?? '');
-    _projectTypeController = TextEditingController(text: _editableProjectData['projectType'] ?? '');
-    _githubLinkController = TextEditingController(text: _editableProjectData['githubLink'] ?? '');
+    _nameController = TextEditingController(
+      text: _editableProjectData['name'] ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: _editableProjectData['description'] ?? '',
+    );
+    _projectTypeController = TextEditingController(
+      text: _editableProjectData['projectType'] ?? '',
+    );
+    _githubLinkController = TextEditingController(
+      text: _editableProjectData['githubLink'] ?? '',
+    );
 
     // Load comments from Firestore
     _loadComments();
@@ -111,30 +119,31 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
         return;
       }
 
-      final commentsSnapshot = await FirebaseFirestore.instance
-          .collection('comments')
-          .where('projectId', isEqualTo: projectId)
-          .orderBy('timestamp', descending: true)
-          .get();
+      final commentsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('comments')
+              .where('projectId', isEqualTo: projectId)
+              .orderBy('timestamp', descending: true)
+              .get();
 
       if (commentsSnapshot.docs.isNotEmpty) {
         setState(() {
-          comments = commentsSnapshot.docs.map((doc) {
-            final data = doc.data();
-            return {
-              'id': doc.id,
-              'userId': data['userId'] ?? '',
-              'userName': data['userName'] ?? 'Anonymous',
-              'text': data['text'] ?? '',
-              'timestamp': (data['timestamp'] as Timestamp).toDate(),
-              'isOwner': data['isOwner'] ?? false,
-              'projectId': data['projectId'] ?? '',
-            };
-          }).toList();
+          comments =
+              commentsSnapshot.docs.map((doc) {
+                final data = doc.data();
+                return {
+                  'id': doc.id,
+                  'userId': data['userId'] ?? '',
+                  'userName': data['userName'] ?? 'Anonymous',
+                  'text': data['text'] ?? '',
+                  'timestamp': (data['timestamp'] as Timestamp).toDate(),
+                  'isOwner': data['isOwner'] ?? false,
+                  'projectId': data['projectId'] ?? '',
+                };
+              }).toList();
         });
       } else {
         print('No comments found in Firestore');
-
       }
     } catch (error) {
       print('Error loading comments: $error');
@@ -146,7 +155,6 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
           ),
         );
       }
-
     } finally {
       if (mounted) {
         setState(() {
@@ -156,28 +164,29 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
     }
   }
 
-
-
   Future<void> _addComment() async {
     final commentText = _commentController.text.trim();
     if (commentText.isEmpty) return;
 
     // Get current user info
-    String userName = widget.firstname +" " + widget.lastname;
+    String userName = widget.firstname + " " + widget.lastname;
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
 
       if (currentUser != null && currentUser.displayName != null) {
         userName = currentUser.displayName!;
       } else if (isOwner) {
-        userName = '${widget.projectData['submitter']['firstName'] ?? ''} ${widget.projectData['submitter']['lastName'] ?? ''}'.trim();
+        userName =
+            '${widget.projectData['submitter']['firstName'] ?? ''} ${widget.projectData['submitter']['lastName'] ?? ''}'
+                .trim();
       }
     } catch (e) {
       print('Error getting user display name: $e');
     }
 
     // Get project ID - ensure we're using the correct field name
-    final projectId = widget.projectData['id'] ?? widget.projectData['projectId'];
+    final projectId =
+        widget.projectData['id'] ?? widget.projectData['projectId'];
 
     if (projectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -192,23 +201,23 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
     final newComment = {
       'userId': widget.currentUserEmail,
       'userName': userName,
-      'text': commentText,  // Use the trimmed text we saved earlier
+      'text': commentText, // Use the trimmed text we saved earlier
       'timestamp': DateTime.now(),
       'isOwner': isOwner,
-      'projectId': projectId,  // Use the project ID we extracted
+      'projectId': projectId, // Use the project ID we extracted
     };
 
     // Show optimistic update first
     setState(() {
       comments.insert(0, newComment);
-      _commentController.clear();  // Clear only after we've used the text
+      _commentController.clear(); // Clear only after we've used the text
     });
 
     try {
       // Save comment to Firestore
       final docRef = await FirebaseFirestore.instance
           .collection('comments')
-          .add(newComment);  // Use the complete newComment map
+          .add(newComment); // Use the complete newComment map
 
       // Update the comment with the firestore ID
       if (mounted) {
@@ -239,7 +248,8 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
     // Only allow deleting if:
     // 1. User is the comment owner, or
     // 2. User is the project owner
-    final bool isCommentOwner = comments[index]['userId'] == widget.currentUserEmail;
+    final bool isCommentOwner =
+        comments[index]['userId'] == widget.currentUserEmail;
 
     if (!isCommentOwner && !isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -307,12 +317,12 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
             .collection('Projects')
             .doc(widget.projectData['id'])
             .update({
-          'name': _nameController.text,
-          'description': _descriptionController.text,
-          'projectType': _projectTypeController.text,
-          'githubLink': _githubLinkController.text,
-          'lastUpdated': Timestamp.now(),
-        });
+              'name': _nameController.text,
+              'description': _descriptionController.text,
+              'projectType': _projectTypeController.text,
+              'githubLink': _githubLinkController.text,
+              'lastUpdated': Timestamp.now(),
+            });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -365,72 +375,76 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
   Widget build(BuildContext context) {
     // Extract project data
     final String name = _editableProjectData['name'] ?? 'No Name';
-    final String description = _editableProjectData['description'] ?? 'No Description';
+    final String description =
+        _editableProjectData['description'] ?? 'No Description';
     final String projectType = _editableProjectData['projectType'] ?? 'N/A';
-    final List<dynamic>? languagesList = _editableProjectData['programmingLanguages'];
-    final String programmingLanguages = languagesList != null
-        ? languagesList.join(', ')
-        : 'N/A';
+    final List<dynamic>? languagesList =
+        _editableProjectData['programmingLanguages'];
+    final String programmingLanguages =
+        languagesList != null ? languagesList.join(', ') : 'N/A';
     final String githubLink = _editableProjectData['githubLink'] ?? 'N/A';
     final String rapportUrl = _editableProjectData['rapportUrl'] ?? '';
     final Map<String, dynamic> submitter =
-    _editableProjectData['submitter'] is Map<String, dynamic>
-        ? _editableProjectData['submitter']
-        : {};
+        _editableProjectData['submitter'] is Map<String, dynamic>
+            ? _editableProjectData['submitter']
+            : {};
     final String submitterName =
-    "${submitter['firstName'] ?? ''} ${submitter['lastName'] ?? ''}".trim();
+        "${submitter['firstName'] ?? ''} ${submitter['lastName'] ?? ''}".trim();
     final String submitterEmail = submitter['email'] ?? 'N/A';
 
     return Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          title: Text(
-            "Project Details",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          backgroundColor: primaryColor.withOpacity(0.8),
-          elevation: 0,
-          centerTitle: true,
-          flexibleSpace: ClipRRect(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryColor.withOpacity(0.8), accentColor.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            if (isOwner)
-              IconButton(
-                icon: Icon(
-                  isEditMode ? Icons.save_rounded : Icons.edit_rounded,
-                  color: Colors.white,
-                ),
-                onPressed: isEditMode ? _saveChanges : _toggleEditMode,
-                tooltip: isEditMode ? 'Save Changes' : 'Edit Project',
-              ),
-          ],
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(
+          "Project Details",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [backgroundStartColor, backgroundEndColor],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        backgroundColor: primaryColor.withOpacity(0.8),
+        elevation: 0,
+        centerTitle: true,
+        flexibleSpace: ClipRRect(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primaryColor.withOpacity(0.8),
+                  accentColor.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
-          child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                  // Project Details Card
-                  Card(
+        ),
+        actions: [
+          if (isOwner)
+            IconButton(
+              icon: Icon(
+                isEditMode ? Icons.save_rounded : Icons.edit_rounded,
+                color: Colors.white,
+              ),
+              onPressed: isEditMode ? _saveChanges : _toggleEditMode,
+              tooltip: isEditMode ? 'Save Changes' : 'Edit Project',
+            ),
+        ],
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [backgroundStartColor, backgroundEndColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Project Details Card
+                Card(
                   color: cardColor,
                   elevation: 8,
                   shadowColor: Colors.black.withOpacity(0.3),
@@ -438,134 +452,179 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 30,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    // Project Name
-                    Center(
-                    child: isEditMode
-                    ? TextField(
-                    controller: _nameController,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: accentColor),
+                        // Project Name
+                        Center(
+                          child:
+                              isEditMode
+                                  ? TextField(
+                                    controller: _nameController,
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: accentColor,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: accentColor,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding: EdgeInsets.all(12),
+                                    ),
+                                  )
+                                  : Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: accentColor, width: 2),
+                        const SizedBox(height: 24),
+
+                        // Description
+                        _buildSectionHeader(
+                          Icons.description_rounded,
+                          "Description",
+                          isOwner && !isEditMode,
                         ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.all(12),
-                      ),
-                    )
-                        : Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                        const SizedBox(height: 10),
+                        isEditMode
+                            ? TextField(
+                              controller: _descriptionController,
+                              maxLines: 5,
+                              style: TextStyle(fontSize: 16),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: accentColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                            )
+                            : Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Text(
+                                description,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                        const Divider(height: 40, thickness: 1),
 
-                // Description
-                _buildSectionHeader(Icons.description_rounded, "Description", isOwner && !isEditMode),
-                const SizedBox(height: 10),
-                isEditMode
-                    ? TextField(
-                  controller: _descriptionController,
-                  maxLines: 5,
-                  style: TextStyle(fontSize: 16),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor, width: 2),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                  ),
-                )
-                    : Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Text(
-                    description,
-                    style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
-                  ),
-                ),
-                const Divider(height: 40, thickness: 1),
+                        // Project Type
+                        _buildSectionHeader(
+                          Icons.category_rounded,
+                          "Project Type",
+                          isOwner && !isEditMode,
+                        ),
+                        const SizedBox(height: 10),
+                        isEditMode
+                            ? TextField(
+                              controller: _projectTypeController,
+                              style: TextStyle(fontSize: 16),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: accentColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                            )
+                            : Container(
+                              padding: EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: accentColor.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                projectType,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        const Divider(height: 40, thickness: 1),
 
-                // Project Type
-                _buildSectionHeader(Icons.category_rounded, "Project Type", isOwner && !isEditMode),
-                const SizedBox(height: 10),
-                isEditMode
-                    ? TextField(
-                  controller: _projectTypeController,
-                  style: TextStyle(fontSize: 16),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accentColor, width: 2),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                  ),
-                )
-                    : Container(
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentColor.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    projectType,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const Divider(height: 40, thickness: 1),
-
-                // Programming Languages
-                _buildSectionHeader(Icons.code_rounded, "Languages", isOwner && !isEditMode),
-                const SizedBox(height: 10),
+                        // Programming Languages
+                        _buildSectionHeader(
+                          Icons.code_rounded,
+                          "Languages",
+                          isOwner && !isEditMode,
+                        ),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             ...(languagesList ?? []).map<Widget>((language) {
                               return Container(
-                                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 6,
+                                  horizontal: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: highlightColor.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: highlightColor.withOpacity(0.3)),
+                                  border: Border.all(
+                                    color: highlightColor.withOpacity(0.3),
+                                  ),
                                 ),
                                 child: Text(
                                   language.toString(),
@@ -579,7 +638,10 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                             // If no languages, show N/A
                             if (languagesList == null || languagesList.isEmpty)
                               Container(
-                                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 6,
+                                  horizontal: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(20),
@@ -594,440 +656,520 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                               ),
                           ],
                         ),
-          const Divider(height: 40, thickness: 1),
+                        const Divider(height: 40, thickness: 1),
 
-        // Github Link
-        _buildSectionHeader(Icons.link_rounded, "Github Link", isOwner && !isEditMode),
-        const SizedBox(height: 10),
-        isEditMode
-            ? TextField(
-          controller: _githubLinkController,
-          style: TextStyle(fontSize: 16),
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: accentColor, width: 2),
-            ),
-            prefixIcon: Icon(Icons.link, color: accentColor),
-            filled: true,
-            fillColor: Colors.grey.shade50,
-          ),
-        )
-            : GestureDetector(
-          onTap: () async {
-            final Uri url = Uri.parse(githubLink);
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url);
-            } else {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Could not launch $githubLink'),
-                    backgroundColor: Colors.red.shade600,
-                  ),
-                );
-              }
-            }
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.link, color: accentColor),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    githubLink,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: accentColor,
-                      decoration: TextDecoration.underline,
+                        // Github Link
+                        _buildSectionHeader(
+                          Icons.link_rounded,
+                          "Github Link",
+                          isOwner && !isEditMode,
+                        ),
+                        const SizedBox(height: 10),
+                        isEditMode
+                            ? TextField(
+                              controller: _githubLinkController,
+                              style: TextStyle(fontSize: 16),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: accentColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.link,
+                                  color: accentColor,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                            )
+                            : GestureDetector(
+                              onTap: () async {
+                                final Uri url = Uri.parse(githubLink);
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url);
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Could not launch $githubLink',
+                                        ),
+                                        backgroundColor: Colors.red.shade600,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.link, color: accentColor),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        githubLink,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: accentColor,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        const Divider(height: 40, thickness: 1),
+
+                        // Rapport
+                        if (rapportUrl.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader(
+                                Icons.picture_as_pdf_rounded,
+                                "Rapport",
+                                isOwner && !isEditMode,
+                              ),
+                              const SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () async {
+                                  final Uri url = Uri.parse(rapportUrl);
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url);
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not launch $rapportUrl',
+                                          ),
+                                          backgroundColor: Colors.red.shade600,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: secondaryAccentColor.withOpacity(
+                                      0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: secondaryAccentColor.withOpacity(
+                                        0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        color: secondaryAccentColor,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "View Project Report",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: secondaryAccentColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const Divider(height: 40, thickness: 1),
+                            ],
+                          ),
+
+                        // Submitter Info
+                        Text(
+                          "Submitted by",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 5,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: primaryColor.withOpacity(
+                                      0.2,
+                                    ),
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        submitterName.isEmpty
+                                            ? 'Unknown'
+                                            : submitterName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        submitterEmail,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // Comments Section
+                Card(
+                  color: cardColor,
+                  elevation: 8,
+                  shadowColor: Colors.black.withOpacity(0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.comment_rounded, color: primaryColor),
+                            SizedBox(width: 10),
+                            Text(
+                              "Comments",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                            if (comments.isNotEmpty)
+                              Container(
+                                margin: EdgeInsets.only(left: 10),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accentColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${comments.length}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Add Comment
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Add your comment",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _commentController,
+                                      decoration: InputDecoration(
+                                        hintText: "Share your thoughts...",
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey.shade400,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: accentColor,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding: EdgeInsets.all(12),
+                                      ),
+                                      maxLines: 3,
+                                      style: TextStyle(fontSize: 15),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: _addComment,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: accentColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                        horizontal: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.send_rounded, size: 20),
+                                        SizedBox(width: 8),
+                                        Text('Post'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Comments List
+                        if (isLoading)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  accentColor,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (comments.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(30.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    size: 50,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'No comments yet',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Be the first to comment!',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: comments.length,
+                            separatorBuilder:
+                                (context, index) => SizedBox(height: 16),
+                            itemBuilder:
+                                (context, index) =>
+                                    _buildCommentItem(comments[index], index),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Resubmit Button (Only for owners)
+                if (isOwner && !isEditMode)
+                  Container(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Implementation for resubmitting project
+                        if (widget.projectData['id'] != null) {
+                          FirebaseFirestore.instance
+                              .collection('Projects')
+                              .doc(widget.projectData['id'])
+                              .update({
+                                'status': 'resubmitted',
+                                'resubmittedAt': Timestamp.now(),
+                              })
+                              .then((_) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Project resubmitted successfully!',
+                                    ),
+                                    backgroundColor: Colors.green.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              })
+                              .catchError((error) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error resubmitting project: $error',
+                                    ),
+                                    backgroundColor: Colors.red.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Project resubmitted successfully!',
+                              ),
+                              backgroundColor: Colors.green.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(Icons.refresh_rounded),
+                      label: Text(
+                        "Resubmit Project",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                    ),
+                  ),
+
+                SizedBox(height: 30),
               ],
             ),
           ),
         ),
-        const Divider(height: 40, thickness: 1),
-
-        // Rapport
-        if (rapportUrl.isNotEmpty)
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(Icons.picture_as_pdf_rounded, "Rapport", isOwner && !isEditMode),
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: () async {
-            final Uri url = Uri.parse(rapportUrl);
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url);
-            } else {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Could not launch $rapportUrl'),
-                    backgroundColor: Colors.red.shade600,
-                  ),
-                );
-              }
-            }
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: secondaryAccentColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: secondaryAccentColor.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.picture_as_pdf_rounded, color: secondaryAccentColor),
-                SizedBox(width: 8),
-                Text(
-                  "View Project Report",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: secondaryAccentColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(height: 40, thickness: 1),
-      ],
-    ),
-
-    // Submitter Info
-    Text(
-    "Submitted by",
-    style: TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-    color: primaryColor,
-    ),
-    ),
-    const SizedBox(height: 16),
-    Container(
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-    color: Colors.grey.shade50,
-    borderRadius: BorderRadius.circular(15),
-    border: Border.all(color: Colors.grey.shade200),
-    boxShadow: [
-    BoxShadow(
-    color: Colors.black.withOpacity(0.03),
-    blurRadius: 5,
-    offset: Offset(0, 3),
-    ),
-    ],
-    ),
-    child: Column(
-    children: [
-    Row(
-    children: [
-    CircleAvatar(
-    backgroundColor: primaryColor.withOpacity(0.2),
-    child: Icon(Icons.person_rounded, color: primaryColor),
-    ),
-    const SizedBox(width: 12),
-    Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Text(
-    submitterName.isEmpty ? 'Unknown' : submitterName,
-    style: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: Colors.black87,
-    ),
-    ),
-    SizedBox(height: 4),
-    Text(
-    submitterEmail,
-    style: TextStyle(
-    fontSize: 14,
-    color: Colors.grey.shade700,
-    ),
-    ),
-    ],
-    ),
-    ],
-    ),
-    ],
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),
-
-    const SizedBox(height: 24),
-
-    // Comments Section
-    Card(
-    color: cardColor,
-    elevation: 8,
-    shadowColor: Colors.black.withOpacity(0.3),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(20),
-    ),
-    child: Padding(
-    padding: const EdgeInsets.all(24),
-    child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Row(
-    children: [
-    Icon(Icons.comment_rounded, color: primaryColor),
-    SizedBox(width: 10),
-    Text(
-    "Comments",
-    style: TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-    color: primaryColor,
-    ),
-    ),
-    if (comments.isNotEmpty)
-    Container(
-    margin: EdgeInsets.only(left: 10),
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(
-    color: accentColor,
-    borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-    '${comments.length}',
-    style: TextStyle(
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    ),
-    ],
-    ),
-    const SizedBox(height: 20),
-
-    // Add Comment
-    Container(
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-    color: Colors.grey.shade50,
-    borderRadius: BorderRadius.circular(15),
-    border: Border.all(color: Colors.grey.shade200),
-    ),
-    child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Text(
-    "Add your comment",
-    style: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: primaryColor,
-    ),
-    ),
-    SizedBox(height: 10),
-    Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Expanded(
-    child: TextField(
-    controller: _commentController,
-    decoration: InputDecoration(
-    hintText: "Share your thoughts...",
-    hintStyle: TextStyle(color: Colors.grey.shade400),
-    border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: accentColor, width: 2),
-    ),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: EdgeInsets.all(12),
-    ),
-    maxLines: 3,
-    style: TextStyle(fontSize: 15),
-    ),
-    ),
-    const SizedBox(width: 12),
-    ElevatedButton(
-    onPressed: _addComment,
-    style: ElevatedButton.styleFrom(
-    backgroundColor: accentColor,
-    foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-    ),
-    elevation: 2,
-    ),
-    child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-    Icon(Icons.send_rounded, size: 20),
-    SizedBox(width: 8),
-    Text('Post'),
-    ],
-    ),
-    ),
-    ],
-    ),
-    ],
-    ),
-    ),
-
-    const SizedBox(height: 20),
-
-    // Comments List
-    if (isLoading)
-    Center(
-    child: Padding(
-    padding: const EdgeInsets.all(20.0),
-    child: CircularProgressIndicator(
-    valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-    ),
-    ),
-    )
-    else if (comments.isEmpty)
-    Center(
-    child: Padding(
-    padding: const EdgeInsets.all(30.0),
-    child: Column(
-    children: [
-    Icon(
-    Icons.chat_bubble_outline_rounded,
-    size: 50,
-    color: Colors.grey.shade400,
-    ),
-    SizedBox(height: 16),
-    Text(
-    'No comments yet',
-    style: TextStyle(
-    fontSize: 16,
-    color: Colors.grey.shade600,
-    fontWeight: FontWeight.w500,
-    ),
-    ),
-    SizedBox(height: 8),
-    Text(
-    'Be the first to comment!',
-    style: TextStyle(
-    fontSize: 14,
-    color: Colors.grey.shade500,
-    ),
-    ),
-    ],
-    ),
-    ),
-    )
-    else
-    ListView.separated(
-    shrinkWrap: true,
-    physics: NeverScrollableScrollPhysics(),
-    itemCount: comments.length,
-    separatorBuilder: (context, index) => SizedBox(height: 16),
-    itemBuilder: (context, index) => _buildCommentItem(comments[index], index),
-    ),
-    ],
-    ),
-    ),
-    ),
-
-    const SizedBox(height: 24),
-
-    // Resubmit Button (Only for owners)
-    if (isOwner && !isEditMode)
-    Container(
-    width: double.infinity,
-    child: ElevatedButton.icon(
-    onPressed: () {
-    // Implementation for resubmitting project
-    if (widget.projectData['id'] != null) {
-    FirebaseFirestore.instance
-        .collection('Projects')
-        .doc(widget.projectData['id'])
-        .update({
-    'status': 'resubmitted',
-    'resubmittedAt': Timestamp.now(),
-    }).then((_) {
-    ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-    content: Text('Project resubmitted successfully!'),
-    backgroundColor: Colors.green.shade600,
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(10),
-    ),
-    ),
-    );
-    }).catchError((error) {
-    ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-    content: Text('Error resubmitting project: $error'),
-    backgroundColor: Colors.red.shade600,
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(10),
-    ),
-    ),
-    );
-    });
-    } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-    content: Text('Project resubmitted successfully!'),
-    backgroundColor: Colors.green.shade600,
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(10),
-    ),
-    ),
-    );
-    }
-    },
-    icon: Icon(Icons.refresh_rounded),
-    label: Text(
-    "Resubmit Project",
-    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-    ),
-    style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.green.shade600,
-    foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-    ),
-    elevation: 3,
-    ),
-    ),
-    ),
-
-    SizedBox(height: 30),
-    ],
-    ),
-    ),
-    ),
-    ),
+      ),
     );
   }
 
@@ -1078,14 +1220,16 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: comment['isOwner']
-            ? accentColor.withOpacity(0.05)
-            : Colors.grey.shade50,
+        color:
+            comment['isOwner']
+                ? accentColor.withOpacity(0.05)
+                : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: comment['isOwner']
-              ? accentColor.withOpacity(0.3)
-              : Colors.grey.shade200,
+          color:
+              comment['isOwner']
+                  ? accentColor.withOpacity(0.3)
+                  : Colors.grey.shade200,
         ),
       ),
       child: Column(
@@ -1094,16 +1238,20 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: comment['isOwner']
-                    ? secondaryAccentColor.withOpacity(0.2)
-                    : primaryColor.withOpacity(0.1),
+                backgroundColor:
+                    comment['isOwner']
+                        ? secondaryAccentColor.withOpacity(0.2)
+                        : primaryColor.withOpacity(0.1),
                 radius: 18,
                 child: Text(
                   (comment['userName'] as String).isNotEmpty
                       ? (comment['userName'] as String)[0].toUpperCase()
                       : 'A',
                   style: TextStyle(
-                    color: comment['isOwner'] ? secondaryAccentColor : primaryColor,
+                    color:
+                        comment['isOwner']
+                            ? secondaryAccentColor
+                            : primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1126,7 +1274,10 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                         SizedBox(width: 8),
                         if (comment['isOwner'] == true)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: secondaryAccentColor,
                               borderRadius: BorderRadius.circular(12),
@@ -1144,7 +1295,9 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                     ),
                     SizedBox(height: 2),
                     Text(
-                      DateFormat('MMM d, yyyy · h:mm a').format(comment['timestamp']),
+                      DateFormat(
+                        'MMM d, yyyy · h:mm a',
+                      ).format(comment['timestamp']),
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,
@@ -1155,7 +1308,11 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
               ),
               if (isOwner || isCommentOwner)
                 IconButton(
-                  icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red.shade400,
+                    size: 20,
+                  ),
                   onPressed: () => _deleteComment(index),
                   padding: EdgeInsets.zero,
                   constraints: BoxConstraints(),
