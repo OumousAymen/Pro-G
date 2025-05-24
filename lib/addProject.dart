@@ -4,6 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'Checker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io' as io;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; // for kIsWeb
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 
 class AddProjectPage extends StatefulWidget {
   final String firstName;
@@ -51,28 +57,33 @@ class _AddProjectPageState extends State<AddProjectPage> {
   String? _pdfFileName;
   bool _isUploading = false;
 
+  Uint8List? _pdfBytes;
+
   Future<void> _pickPDF() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
+      withData: true, // important for web to get bytes
     );
     if (result != null) {
       setState(() {
-        _pdfFile = File(result.files.single.path!);
         _pdfFileName = result.files.single.name;
+        _pdfBytes = result.files.single.bytes; // for web
+        if (!kIsWeb) {
+          _pdfFile = io.File(result.files.single.path!); // for Android/iOS
+        }
       });
     }
   }
 
+
   Future<void> _submitProject() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Trimmed inputs
     final String name = _nameController.text.trim();
     final String description = _descriptionController.text.trim();
     final String github = _githubLinkController.text.trim();
 
-    // Inappropriate-content check
     if (isInappropriateProjectName(name) ||
         isInappropriateProjectName(description) ||
         isInappropriateProjectName(github)) {
@@ -82,65 +93,92 @@ class _AddProjectPageState extends State<AddProjectPage> {
       return;
     }
 
-    // GitHub URL validity check
     if (!isValidGithubLink(github)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid GitHub link.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid GitHub link.')),
+      );
       return;
     }
 
-    // Gather selected languages
-    List<String> selectedLanguages =
-        _programmingLanguages.entries
-            .where((entry) => entry.value)
-            .map((entry) => entry.key)
-            .toList();
+    List<String> selectedLanguages = _programmingLanguages.entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toList();
 
     setState(() {
       _isUploading = true;
     });
 
-    // Upload PDF if present
-    String? pdfUrl;
-    if (_pdfFile != null) {
-      try {
-        final filePath =
-            'projects/rapport_${DateTime.now().millisecondsSinceEpoch}_${_pdfFileName}';
-        final ref = FirebaseStorage.instance.ref().child(filePath);
-        UploadTask uploadTask = ref.putFile(_pdfFile!);
-        TaskSnapshot snapshot = await uploadTask;
-        pdfUrl = await snapshot.ref.getDownloadURL();
-      } catch (e) {
-        print('Error uploading PDF: $e');
+    try {
+      // Generate Firestore project ID in advance
+      final projectDoc = FirebaseFirestore.instance.collection('Projects').doc();
+      final projectId = projectDoc.id;
+
+      // Upload PDF to FastAPI backend
+      if (_pdfFileName != null && (_pdfFile != null || _pdfBytes != null)) {
+        final uri = Uri.parse('http://localhost:8000/upload/$projectId');
+        final request = http.MultipartRequest('POST', uri);
+
+        if (kIsWeb) {
+          // Web: upload from bytes
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'file',
+              _pdfBytes!,
+              filename: _pdfFileName,
+              contentType: MediaType('application', 'pdf'),
+            ),
+          );
+        } else {
+          // Android/iOS: upload from file
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'file',
+              _pdfFile!.path,
+              filename: path.basename(_pdfFile!.path),
+              contentType: MediaType('application', 'pdf'),
+            ),
+          );
+        }
+
+        final response = await request.send();
+        if (response.statusCode != 200) {
+          throw Exception('PDF upload failed with status ${response.statusCode}');
+        }
       }
+
+      // Save metadata to Firestore
+      await projectDoc.set({
+        'name': name,
+        'description': description,
+        'projectType': _projectType,
+        'programmingLanguages': selectedLanguages,
+        'githubLink': github,
+        'rapportUrl': '', // Optionally generate a URL from your backend
+        'submitter': {
+          'firstName': widget.firstName,
+          'lastName': widget.lastName,
+          'email': widget.email,
+        },
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Project submitted successfully')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      print('Error during submission: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
     }
-
-    // Save to Firestore
-    await FirebaseFirestore.instance.collection('Projects').add({
-      'name': name,
-      'description': description,
-      'projectType': _projectType,
-      'programmingLanguages': selectedLanguages,
-      'githubLink': github,
-      'rapportUrl': pdfUrl ?? '',
-      'submitter': {
-        'firstName': widget.firstName,
-        'lastName': widget.lastName,
-        'email': widget.email,
-      },
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-
-    setState(() {
-      _isUploading = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Project submitted successfully')),
-    );
-    Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {
