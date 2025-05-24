@@ -3,8 +3,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'secrets.dart';
+import 'dart:io';
 
 class ProjectDisplayPage extends StatefulWidget {
+
   final Map<String, dynamic> projectData;
   final String currentUserEmail;
   final String firstname;
@@ -44,7 +48,76 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
   final Color backgroundStartColor = const Color(0xFF3A0CA3);
   final Color backgroundEndColor = const Color(0xFF4CC9F0);
   final Color cardColor = Colors.white.withOpacity(0.95);
+  Future<bool> _checkPdfExists(String projectId) async {
+    try {
+      final response = await http.get(
+        Uri.parse(NgrokURL+'/files/$projectId'),
+        headers: {'Accept': 'application/pdf','ngrok-skip-browser-warning': 'true'},
+      );
 
+      // Check if response is successful and content-type is PDF
+      return response.statusCode == 200 &&
+          response.headers['content-type']?.contains('application/pdf') == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _viewOrDownloadPdf(String projectId) async {
+    final pdfUrl = NgrokURL+'/files/$projectId';
+
+    try {
+      // First try to open the PDF in a viewer
+      if (await canLaunchUrl(Uri.parse(pdfUrl))) {
+        await launchUrl(
+          Uri.parse(pdfUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        await launchUrl(
+          Uri.parse(pdfUrl),
+          mode: LaunchMode.platformDefault,
+        );
+
+        // If that fails, download it with the correct filename
+        final response = await http.get(Uri.parse(pdfUrl));
+
+        // Get the filename from content-disposition header or use a default
+        String? filename;
+        final contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition != null) {
+          final match = RegExp('filename="(.+?)"').firstMatch(contentDisposition);
+          filename = match?.group(1);
+        }
+        filename ??= 'project/$projectId';
+
+        // Get the downloads directory
+        final directory = NgrokURL;
+        if (directory == null) return;
+
+        final file = File('${directory}/$filename');
+        await file.writeAsBytes(response.bodyBytes);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PDF downloaded to ${file.path}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -760,85 +833,82 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
                             ),
                         const Divider(height: 40, thickness: 1),
                         // Rapport
-                        if (rapportUrl.isNotEmpty)
+                        // Add this right after the GitHub link section (after the Divider)
+// PDF Section
+                        if (_editableProjectData['id'] != null)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSectionHeader(
                                 Icons.picture_as_pdf_rounded,
-                                "Rapport",
-                                isOwner && !isEditMode,
+                                "Project PDF",
+                                false,
                               ),
                               const SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () async {
-                                  final Uri url = Uri.parse(rapportUrl);
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(url);
-                                  } else {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Could not launch $rapportUrl',
-                                          ),
-                                          backgroundColor: Colors.red.shade600,
-                                        ),
-                                      );
-                                    }
+                              FutureBuilder<bool>(
+                                future: _checkPdfExists(_editableProjectData['id']),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return const CircularProgressIndicator();
                                   }
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: 12,
-                                    horizontal: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: secondaryAccentColor.withOpacity(
-                                      0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: secondaryAccentColor.withOpacity(
-                                        0.3,
+                                  if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 16,
                                       ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.picture_as_pdf_rounded,
-                                        color: secondaryAccentColor,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "View Project Report",
+                                      child: const Text(
+                                        "No PDF available",
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: secondaryAccentColor,
-                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    );
+                                  }
+                                  return GestureDetector(
+                                    onTap: () => _viewOrDownloadPdf(_editableProjectData['id']),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Colors.red.shade200,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.picture_as_pdf_rounded,
+                                            color: Colors.red,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            "View Project PDF",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               const Divider(height: 40, thickness: 1),
                             ],
                           ),
-
-                        // Submitter Info
-                        Text(
-                          "Submitted by",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                          ),
-                        ),
                         const SizedBox(height: 16),
                         Container(
                           padding: EdgeInsets.all(16),

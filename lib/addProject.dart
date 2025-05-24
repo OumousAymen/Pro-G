@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
+import "secrets.dart";
 
 class AddProjectPage extends StatefulWidget {
   final String firstName;
@@ -116,7 +117,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
 
       // Upload PDF to FastAPI backend
       if (_pdfFileName != null && (_pdfFile != null || _pdfBytes != null)) {
-        final uri = Uri.parse('http://127.0.0.1:8000/upload/$projectId');
+        final uri = Uri.parse(NgrokURL+'/upload/$projectId');
         final request = http.MultipartRequest('POST', uri);
 
         if (kIsWeb) {
