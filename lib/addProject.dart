@@ -116,7 +116,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
 
       // Upload PDF to FastAPI backend
       if (_pdfFileName != null && (_pdfFile != null || _pdfBytes != null)) {
-        final uri = Uri.parse('http://localhost:8000/upload/$projectId');
+        final uri = Uri.parse('http://127.0.0.1:8000/upload/$projectId');
         final request = http.MultipartRequest('POST', uri);
 
         if (kIsWeb) {
@@ -144,6 +144,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
         final response = await request.send();
         if (response.statusCode != 200) {
           throw Exception('PDF upload failed with status ${response.statusCode}');
+
         }
       }
 
