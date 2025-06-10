@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'secrets.dart';
 import 'dart:io';
+import 'package:open_file/open_file.dart';
 
 class ProjectDisplayPage extends StatefulWidget {
 
@@ -69,14 +70,17 @@ class _ProjectDisplayPageState extends State<ProjectDisplayPage> {
     try {
       // First try to open the PDF in a viewer
       if (await canLaunchUrl(Uri.parse(pdfUrl))) {
+
         await launchUrl(
           Uri.parse(pdfUrl),
-          mode: LaunchMode.externalApplication,
+          mode: LaunchMode.platformDefault,
+          webOnlyWindowName: '_blank',
+
         );
       } else {
         await launchUrl(
           Uri.parse(pdfUrl),
-          mode: LaunchMode.platformDefault,
+          mode: LaunchMode.platformDefault  ,
         );
 
         // If that fails, download it with the correct filename
