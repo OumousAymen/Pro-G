@@ -121,6 +121,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
         final request = http.MultipartRequest('POST', uri);
 
         if (kIsWeb) {
+          
           // Web: upload from bytes
           request.files.add(
             http.MultipartFile.fromBytes(

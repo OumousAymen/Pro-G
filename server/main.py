@@ -58,3 +58,6 @@ def delete_file(project_id: str, filename: str):
         os.remove(file_path)
         return {"status": "deleted"}
     return {"error": "File not found"}
+
+#pip install fastapi uvicorn python-multipart
+#uvicorn main:app --reload --port 8080
